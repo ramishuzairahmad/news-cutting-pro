@@ -657,16 +657,18 @@
       return null;
     }
     const photoH = imgs.getBoundingClientRect().height || 0;
-    const textH1 = measureTextH1();
-    const W = body.clientWidth || 1;
-    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
-    const colW = (W - (n - 1) * gap) / n || 1;
     const lineH = parseFloat(getComputedStyle(body).lineHeight) || 48;
     const minUnder = 3 * lineH;
-    // Kul unchai: tasveer + text (column mein text poori chaudai se
-    // W/colW guna lamba hota hai, is liye wohi hisab lagaya gaya hai)
-    const total = photoH + textH1 * (W / colW);
-    const byTotal = Math.ceil(total / n) + 6;
+    // Asal kul unchai balanced mode mein napo (formula se behtar) —
+    // is se columns barabar bharti hain. Nap ke baad layout wapas.
+    const prevFillB = body.style.columnFill;
+    const prevHB = body.style.height;
+    body.style.columnFill = 'balance';
+    body.style.height = '';
+    const balancedH = body.scrollHeight || 0;
+    body.style.columnFill = prevFillB;
+    body.style.height = prevHB;
+    const byTotal = balancedH + 6;
     const byPhoto = photoH + minUnder;
     let h = Math.max(byTotal, byPhoto);
     const mode = byTotal >= byPhoto ? 'total' : 'photo-min';
@@ -696,6 +698,7 @@
       body.insertBefore(imgs, $('pv-text'));
       splitTextAt(0);
       const mode0 = applySequentialFill();
+      __ncpLastMode = mode0;
       updateDividers();
       equalizeColumns(mode0);
       updateLinesPerColDisplay();
@@ -716,6 +719,7 @@
     applySequentialFill();
     splitTextAt(findSplitK(text, k));
     const mode = applySequentialFill();
+    __ncpLastMode = mode;
     updateDividers();
     equalizeColumns(mode);
     updateLinesPerColDisplay();
@@ -915,6 +919,7 @@
   // zyada 2.2 tak). Agar 2.2 par bhi barabar na hon to line-height
   // nahi badli jati (pehle wali hi rehti hai).
   let __ncpEqualizing = false;
+  let __ncpLastMode = null;
   function equalizeColumns(fillMode) {
     if (__ncpEqualizing) return;
     if (!$('in-equal-cols') || !$('in-equal-cols').checked) return;
@@ -924,37 +929,45 @@
     if (!imgs.querySelector('img') || !imageIsSingleCol()) return;
     const n = actualColCount();
     if (n <= 1) return;
-    const fs = parseFloat($('in-font-body').value) || 32;
+    __ncpEqualizing = true;
+    const fs0 = parseFloat($('in-font-body').value) || 32;
     const curLh = parseFloat($('in-line-height').value) || 1.5;
-    const photoH = imgs.getBoundingClientRect().height || 0;
-    const W = body.clientWidth || 1;
-    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
-    const colW = (W - (n - 1) * gap) / n || 1;
-    const scale = W / colW;
-    const prevLh = body.style.lineHeight;
-    const prevH = body.style.height;
-    const prevFill = body.style.columnFill;
+    // Step 1: line-height barha kar dekho (halka tareeqa)
+    let foundLh = null;
     for (let lh = curLh + 0.05; lh <= 2.21; lh += 0.05) {
       const r = Math.round(lh * 100) / 100;
       body.style.lineHeight = String(r);
-      const textH1 = measureTextH1();
-      const total = photoH + textH1 * scale;
-      const byTotal = Math.ceil(total / n) + 6;
-      const byPhoto = photoH + 3 * (fs * r);
-      if (byTotal >= byPhoto) {
-        __ncpEqualizing = true;
-        $('in-line-height').value = String(r);
-        $('line-height-val').textContent = String(r);
-        try { localStorage.setItem('ncp-line-height', String(r)); } catch (e) { /* ignore */ }
-        placeImageInColumn();
-        __ncpEqualizing = false;
-        return;
-      }
+      if (applySequentialFill() === 'total') { foundLh = r; break; }
     }
-    // Barabar na ho sake to pehle wali setting wapas lagao
-    body.style.lineHeight = prevLh || String(curLh);
-    body.style.height = prevH;
-    body.style.columnFill = prevFill;
+    if (foundLh !== null) {
+      $('in-line-height').value = String(foundLh);
+      $('line-height-val').textContent = String(foundLh);
+      try { localStorage.setItem('ncp-line-height', String(foundLh)); } catch (e) { /* ignore */ }
+      placeImageInColumn();
+      __ncpEqualizing = false;
+      return;
+    }
+    // Step 1 na ho sake to pehle wali line-height wapas lagao
+    body.style.lineHeight = String(curLh);
+    applySequentialFill();
+    updateDividers();
+    // Step 2: font size barha kar dekho (text zyada lines mein bat-ta hai,
+    // is liye columns bharte hain)
+    let fs = fs0;
+    let ok = false;
+    let tries = 0;
+    while (tries++ < 10 && fs < 60) {
+      fs += 2;
+      $('in-font-body').value = String(fs);
+      applyFontSizes();
+      if (__ncpLastMode === 'total') { ok = true; break; }
+    }
+    if (!ok) {
+      // Barabar na ho sake to pehle wali font size wapas lagao
+      $('in-font-body').value = String(fs0);
+      applyFontSizes();
+    }
+    __ncpEqualizing = false;
   }
   $('in-equal-cols').addEventListener('change', e => {
     try { localStorage.setItem('ncp-equal-cols', e.target.checked ? '1' : '0'); } catch (err) { /* ignore */ }
@@ -965,6 +978,7 @@
   function updateLinesPerColDisplay() {
     const el = $('in-lines-per-col');
     if (!el) return;
+    if (__ncpLinesDragging) return;
     const body = $('pv-body');
     const fs = parseFloat($('in-font-body').value) || 32;
     const lh = parseFloat($('in-line-height').value) || 1.5;
@@ -976,20 +990,32 @@
     $('lines-per-col-val').textContent = String(v);
   }
   // Lainen fi column (manual): font size khud adjust kar ke target
-  // lines-fi-column par le jao (binary search). Khabar khaali ho to
-  // kuch nahi karna.
+  // lines-fi-column par le jao (binary search, asal lines gin kar).
+  // Khabar khaali ho to kuch nahi karna.
   function applyLinesPerCol() {
     const target = parseInt($('in-lines-per-col').value, 10) || 10;
     $('lines-per-col-val').textContent = String(target);
     if (!$('in-body').value.trim()) return;
     const ratio = parseFloat($('in-line-height').value) || 1.5;
     const body = $('pv-body');
+    const imgs = $('pv-images');
+    const n = actualColCount();
+    const photoH = (imgs.querySelector('img') && imageIsSingleCol())
+      ? (imgs.getBoundingClientRect().height || 0) : 0;
+    const W = body.clientWidth || 1;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
+    const colW = (W - (n - 1) * gap) / n || 1;
+    const scale = W / colW;
+    // Aik font size par asal lines-fi-column napo (text + tasveer)
+    function linesAt(fs) {
+      body.style.fontSize = fs + 'px';
+      const textH1 = measureTextH1();
+      return (textH1 * scale + photoH) / (Math.max(n, 1) * fs * ratio);
+    }
     let lo = 12, hi = 100, best = parseFloat($('in-font-body').value) || 32;
     for (let i = 0; i < 7; i++) {
       const mid = Math.round((lo + hi) / 2);
-      body.style.fontSize = mid + 'px';
-      const textH1 = measureTextH1();
-      const lines = textH1 / (mid * ratio);
+      const lines = linesAt(mid);
       best = mid;
       if (lines > target) hi = mid - 1;
       else if (lines < target) lo = mid + 1;
@@ -1001,6 +1027,10 @@
     updateLinesPerColDisplay();
   }
   $('in-lines-per-col').addEventListener('input', applyLinesPerCol);
+  // Lines slider khainchte waqt display us ko wapas na badle
+  let __ncpLinesDragging = false;
+  $('in-lines-per-col').addEventListener('pointerdown', () => { __ncpLinesDragging = true; });
+  window.addEventListener('pointerup', () => { __ncpLinesDragging = false; });
 
   // ---- Body ----
   $('in-body').addEventListener('input', e => {
