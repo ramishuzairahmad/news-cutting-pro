@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نیوز کٹنگ پرو - مکمل ایڈیٹر (Ramish Uzair Ahmed)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  @font-face {
+    font-family: 'Jameel Noori Nastaleeq';
+    src: url('fonts/jameel-noori-nastaleeq4.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
+    font-variant-ligatures: normal;
+    font-feature-settings: normal;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    color: #222;
+    line-height: 2.2;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1.page-title {
+    text-align: center;
+    font-size: 30px;
+    margin: 10px 0 24px;
+  }
+  h1.page-title .owner-name {
+    font-family: Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .editor {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    margin-bottom: 28px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 17px;
+  }
+  .field input[type="text"],
+  .field textarea,
+  .field select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    line-height: 2.2;
+  }
+  .field textarea { min-height: 150px; resize: vertical; }
+  .field input[type="range"] { width: 100%; }
+  .field-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .field-head > label { margin-bottom: 0; }
+  .fs-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .fs-inline input[type="range"] { width: 150px; }
+  .fs-inline .fs-val { font-weight: 700; }
+  .field input[type="file"] { font-family: inherit; font-size: 15px; }
+  .row { display: flex; gap: 12px; }
+  .row .field { flex: 1; }
+  .btn-date {
+    font-family: inherit;
+    font-size: 15px;
+    padding: 6px 18px;
+    border: 1px solid #999;
+    background: #f7f7f7;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .btn-date:hover { background: #e9e9e9; }
+  .btn-download {
+    display: block;
+    width: 100%;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    background: #1e9e4a;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-download:hover { background: #17803c; }
+  .btn-download:disabled { background: #9cccA8; cursor: wait; }
+  .swatches {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .swatches .sw-label { font-size: 14px; font-weight: 700; }
+  .swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    outline: 1px solid #bbb;
+    cursor: pointer;
+    padding: 0;
+  }
+  .swatch.sel { outline: 2px solid #111; outline-offset: 1px; }
+  .swatch.clear {
+    background: #fff linear-gradient(45deg, transparent 46%, #c00 46%, #c00 54%, transparent 54%);
+  }
+
+  /* ===== Newspaper preview ===== */
+  #preview {
+    background: #ffffff;
+    color: #000;
+    min-height: 1980px;
+    border: 1px solid #ddd;
+    padding: 28px 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  }
+  #preview, #preview *:not(#pv-body):not(#pv-body *) { font-weight: 700 !important; }
+  #pv-logo-wrap { margin-bottom: 6px; }
+  #pv-logo-wrap.align-center { text-align: center; }
+  #pv-logo-wrap.align-left { text-align: left; }
+  #pv-logo-wrap.align-right { text-align: right; }
+  #pv-logo { display: none; max-width: 100%; }
+  #pv-date {
+    text-align: center;
+    font-size: 16px;
+    color: #000;
+    border-top: 2px solid #111;
+    border-bottom: 2px solid #111;
+    padding: 4px 0;
+    margin: 10px 0 14px;
+  }
+  #pv-main-heading {
+    font-size: 65px;
+    font-weight: 700;
+    text-align: center;
+    margin: 6px 0 10px;
+  }
+  #pv-sub-heading {
+    background: #111;
+    color: #fff;
+    font-size: 36px;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 10px;
+    margin: 0 0 14px;
+  }
+  #pv-images { max-width: 100%; }
+  #pv-images.float-right { float: right; margin: 0 0 10px 14px; }
+  #pv-images.float-left { float: left; margin: 0 14px 10px 0; }
+  #pv-images.float-center { float: none; margin: 0 auto 10px; }
+  #pv-images.center-full { column-span: all; float: none; margin: 0 auto 10px; }
+  #pv-images.full-width { column-span: all; float: none !important; width: 100% !important; margin: 0 0 14px 0; }
+  #pv-images img {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  #pv-images img:last-child { margin-bottom: 0; }
+  #pv-caption {
+    display: none;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 6px;
+  }
+  #pv-body {
+    position: relative;
+    font-size: 32px;
+    font-weight: 700;
+    text-align: justify;
+    column-count: 3;
+    column-gap: 10px;
+  }
+  .pv-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #333;
+    pointer-events: none;
+  }
+  .hint {
+    text-align: center;
+    color: #777;
+    font-size: 14px;
+    margin-top: 18px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="page-title">نیوز کٹنگ پرو - مکمل ایڈیٹر <span class="owner-name">(Ramish Uzair Ahmed)</span></h1>
+
+  <div class="editor">
+    <div class="row">
+      <div class="field">
+        <label>لوگو:</label>
+        <input type="file" id="in-logo" accept="image/*">
+      </div>
+      <div class="field">
+        <label>سائز: <span id="logo-size-val">150</span> px</label>
+        <input type="range" id="in-logo-size" min="50" max="400" value="150">
+      </div>
+      <div class="field">
+        <label>سیدھ:</label>
+        <select id="in-logo-align">
+          <option value="center" selected>درمیان</option>
+          <option value="left">بائیں</option>
+          <option value="right">دائیں</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>فل چوڑائی:</label>
+        <label style="font-weight:400; font-size:15px; cursor:pointer;">
+          <input type="checkbox" id="in-logo-full" style="transform:scale(1.3); margin-left:6px;">
+          لوگو پوری چوڑائی میں پھیلاؤ
+        </label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>تاریخ:</label>
+      <div>
+        <button type="button" class="btn-date" id="btn-today">آج</button>
+        <button type="button" class="btn-date" id="btn-tomorrow">کل</button>
+      </div>
+      <input type="text" id="in-date" placeholder="تاریخ لکھیں" style="margin-top:8px">
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label>مین ہیڈنگ:</label>
+        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-heading" min="20" max="100" value="65" step="5"> <span class="fs-val" id="fs-heading-val">65</span> px</span>
+      </div>
+      <input type="text" id="in-main-heading" placeholder="مین ہیڈنگ لکھیں">
+      <div class="swatches" id="sw-main"><span class="sw-label">رنگ:</span></div>
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label>سب ہیڈنگ:</label>
+        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-sub" min="11" max="100" value="36" step="5"> <span class="fs-val" id="fs-sub-val">36</span> px</span>
+      </div>
+      <input type="text" id="in-sub-heading" placeholder="سب ہیڈنگ لکھیں">
+      <div class="swatches" id="sw-sub"><span class="sw-label">رنگ:</span></div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>تصویریں: (زیادہ سے زیادہ 4)</label>
+        <input type="file" id="in-image" accept="image/*" multiple>
+      </div>
+      <div class="field">
+        <label>سائز (%): <span id="img-size-val">100</span></label>
+        <input type="range" id="in-image-size" min="20" max="100" value="100">
+      </div>
+      <div class="field">
+        <label>جگہ:</label>
+        <select id="in-image-pos">
+          <option value="right" selected>دائیں طرف</option>
+          <option value="left">بائیں طرف</option>
+          <option value="center">بیچ میں</option>
+        </select>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="in-image-full"> پوری چوڑائی (بڑی تصویر)</label>
+      </div>
+      <div class="field">
+        <label>کنارے گول (px): <span id="img-radius-val">0</span></label>
+        <input type="range" id="in-image-radius" min="0" max="40" step="2" value="0">
+      </div>
+      <div class="field">
+        <label>کالم (سکرالر): <span id="columns-val">3</span></label>
+        <input type="range" id="in-columns" min="2" max="5" step="1" value="3">
+      </div>
+      <div class="field">
+        <label>تصویر کا پھیلاؤ (کالم): <span id="img-span-val">1</span></label>
+        <input type="range" id="in-image-span" min="1" max="3" step="1" value="1">
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="in-image-span-auto"> کالم بڑھنے پر تصویر خود چوڑی ہو</label>
+      </div>
+      <div class="field">
+        <label>تصویر کا کالم: <span id="img-col-val">1</span></label>
+        <input type="range" id="in-image-col" min="1" max="3" step="1" value="1">
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="in-compact" checked> لمبی خبر ایک پیج میں سمٹ جائے (لمبائی کم ہو، کالم خود بڑھیں گے)</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label>کالم کی چوڑائی:</label>
+        <span class="fs-inline">چوڑائی: <input type="range" id="in-col-width" min="0" max="1300" value="0" step="10"> <span class="fs-val" id="col-width-val">Auto</span></span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>تصویر کی تحریر (caption):</label>
+      <input type="text" id="in-caption" placeholder="تصویر کے نیچے لکھنے والی تحریر">
+    </div>
+
+    <div class="field">
+      <div class="field-head">
+        <label>خبر کا متن:</label>
+        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-body" min="12" max="100" value="32" step="5"> <span class="fs-val" id="fs-body-val">32</span> px <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" id="in-body-bold" checked> بولڈ</label></span>
+      </div>
+      <textarea id="in-body" placeholder="خبر کا متن یہاں لکھیں"></textarea>
+    </div>
+
+    <div class="field">
+      <label><input type="checkbox" id="in-download-exact" checked> ڈاؤن لوڈ بالکل اسکرین جیسا ہو (screen par jo nazar aa raha hai, wahi download ho)</label>
+    </div>
+
+    <button type="button" class="btn-download" id="btn-download">ڈاؤن لوڈ کریں</button>
+  </div>
+
+  <div id="preview">
+    <div id="pv-logo-wrap" class="align-center">
+      <img id="pv-logo" alt="">
+    </div>
+    <div id="pv-date"></div>
+    <div id="pv-main-heading"></div>
+    <div id="pv-sub-heading" style="display:none"></div>
+    <div id="pv-body"><div id="pv-images" class="float-right"><div id="pv-caption"></div></div><span id="pv-text"></span><span id="pv-text-after"></span></div>
+  </div>
+
+  <p class="hint">نیوز کٹنگ پرو — لامحدود ڈاؤن لوڈز</p>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  function urduLongDate(d) {
+    return d.toLocaleDateString('ur-PK', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  // ---- Logo ----
+  $('in-logo').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const img = $('pv-logo');
+      img.src = ev.target.result;
+      img.style.display = 'inline-block';
+      applyLogoSize();
+    };
+    r.readAsDataURL(f);
+  });
+  function applyLogoSize() {
+    const px = $('in-logo-size').value;
+    $('logo-size-val').textContent = px;
+    if ($('in-logo-full').checked) {
+      $('pv-logo').style.width = '100%';
+    } else {
+      $('pv-logo').style.width = px + 'px';
+    }
+  }
+  $('in-logo-size').addEventListener('input', applyLogoSize);
+  $('in-logo-full').addEventListener('change', applyLogoSize);
+  $('in-logo-align').addEventListener('change', e => {
+    $('pv-logo-wrap').className = 'align-' + e.target.value;
+  });
+
+  // ---- Date ----
+  $('btn-today').addEventListener('click', () => {
+    const t = urduLongDate(new Date());
+    $('in-date').value = t;
+    $('pv-date').textContent = t;
+  });
+  $('btn-tomorrow').addEventListener('click', () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const t = urduLongDate(d);
+    $('in-date').value = t;
+    $('pv-date').textContent = t;
+  });
+  $('in-date').addEventListener('input', e => {
+    $('pv-date').textContent = e.target.value;
+  });
+
+  // ---- Headings ----
+  $('in-main-heading').addEventListener('input', e => {
+    $('pv-main-heading').textContent = e.target.value;
+  });
+  $('in-sub-heading').addEventListener('input', e => {
+    const v = e.target.value;
+    const el = $('pv-sub-heading');
+    el.textContent = v;
+    el.style.display = v.trim() ? 'block' : 'none';
+  });
+
+  // ---- Heading ke rang (chhote color icons: jis rang ko chuno, usi
+  // heading ki background wohi rang ho jaye, akhbaar colorful banane ke liye) ----
+  const HEADING_COLORS = ['#111111', '#0b6e2f', '#b01e28', '#1e4fa3', '#7b1e26', '#0f6b6b', '#5b2a86'];
+  function applyMainColor(color) {
+    const el = $('pv-main-heading');
+    el.style.backgroundColor = color || '';
+    el.style.color = color ? '#fff' : '';
+    el.style.padding = color ? '4px 10px' : '';
+  }
+  function applySubColor(color) {
+    const el = $('pv-sub-heading');
+    el.style.backgroundColor = color || '#111';
+    el.style.color = '#fff';
+  }
+  function setHeadingColor(key, color, apply) {
+    apply(color);
+    const box = key === 'main' ? $('sw-main') : $('sw-sub');
+    box.querySelectorAll('.swatch').forEach(s => s.classList.toggle('sel', s.dataset.color === color));
+    try {
+      const saved = JSON.parse(localStorage.getItem('ncp-heading-colors') || '{}');
+      saved[key] = color;
+      localStorage.setItem('ncp-heading-colors', JSON.stringify(saved));
+    } catch (e) { /* ignore */ }
+  }
+  function buildSwatches(boxId, key, apply) {
+    const box = $(boxId);
+    HEADING_COLORS.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch';
+      b.style.backgroundColor = c;
+      b.title = c;
+      b.dataset.color = c;
+      b.addEventListener('click', () => setHeadingColor(key, c, apply));
+      box.appendChild(b);
+    });
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'swatch clear';
+    clear.title = 'رنگ ہٹاؤ';
+    clear.dataset.color = '';
+    clear.addEventListener('click', () => setHeadingColor(key, '', apply));
+    box.appendChild(clear);
+  }
+  buildSwatches('sw-main', 'main', applyMainColor);
+  buildSwatches('sw-sub', 'sub', applySubColor);
+
+  // ---- Images (up to 4), floated inside the text ----
+  $('in-image').addEventListener('change', e => {
+    const files = Array.from(e.target.files).slice(0, 4);
+    const wrap = $('pv-images');
+    wrap.querySelectorAll('img').forEach(im => im.remove());
+    files.forEach(f => {
+      const r = new FileReader();
+      r.onload = ev => {
+        const img = document.createElement('img');
+        img.src = ev.target.result;
+        img.alt = '';
+        img.style.borderRadius = $('in-image-radius').value + 'px';
+        img.onload = placeImageInColumn;
+        wrap.insertBefore(img, $('pv-caption'));
+      };
+      r.readAsDataURL(f);
+    });
+    applyImageLayout();
+  });
+  // ---- Photo caption (tasveer ke neeche wali tehreer) ----
+  $('in-caption').addEventListener('input', e => {
+    const v = e.target.value;
+    const el = $('pv-caption');
+    el.textContent = v;
+    el.style.display = v.trim() ? 'block' : 'none';
+  });
+  function applyImageLayout() {
+    const wrap = $('pv-images');
+    const full = $('in-image-full').checked;
+    const pos = $('in-image-pos').value;
+    wrap.classList.remove('float-right', 'float-left', 'float-center', 'full-width', 'center-full');
+    const p = $('in-image-size').value;
+    $('img-size-val').textContent = p;
+    const n = colCountVal();
+    const spanV = $('in-image-span-auto').checked ? n : (parseInt($('in-image-span').value, 10) || 1);
+    $('img-span-val').textContent = spanV;
+    if (full) {
+      wrap.classList.add('full-width');
+      wrap.style.width = '100%';
+    } else if (spanV > 1) {
+      // Tasveer kai columns par pheli: page ki chaudai ke hisab se, beech mein
+      wrap.classList.add('center-full');
+      wrap.style.width = Math.round(spanV / n * 100) + '%';
+    } else if (pos === 'center') {
+      // Poori cutting ke beech mein (sirf aik column ke beech mein nahi)
+      wrap.classList.add('center-full');
+      wrap.style.width = p + '%';
+    } else {
+      wrap.classList.add(pos === 'left' ? 'float-left' : 'float-right');
+      wrap.style.width = p + '%';
+    }
+    const r = $('in-image-radius').value;
+    $('img-radius-val').textContent = r;
+    wrap.querySelectorAll('img').forEach(im => im.style.borderRadius = r + 'px');
+    placeImageInColumn();
+  }
+
+  // ---- Tasveer kis column mein ho (scroller: 1 se N tak) ----
+  // Pehle wala "jagah" (daayein/baayein) option tasveer ko sirf usi
+  // column ke andar hilata tha, column badalta nahi tha. Ab tasveer
+  // waqai agle column mein shift hoti hai: khabar ka text do hisson
+  // mein baant diya jata hai — pehla hissa un columns tak bharta hai
+  // jahan tak text hona chahiye, phir aik khaali "column break" div
+  // tasveer ko agle column ke upar le jata hai aur baaqi text us ke
+  // baad behta hai. Is se pehle wale columns mein text rehta hai.
+  function imageIsSingleCol() {
+    const full = $('in-image-full').checked;
+    const pos = $('in-image-pos').value;
+    const n = colCountVal();
+    const spanV = $('in-image-span-auto').checked ? n : (parseInt($('in-image-span').value, 10) || 1);
+    return !full && spanV === 1 && pos !== 'center';
+  }
+  function imageColumnIndex() {
+    const body = $('pv-body');
+    const imgs = $('pv-images');
+    if (!imgs.querySelector('img')) return 0;
+    const n = actualColCount();
+    const W = body.clientWidth;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
+    const colW = (W - (n - 1) * gap) / n;
+    const br = body.getBoundingClientRect();
+    const ir = imgs.getBoundingClientRect();
+    const cx = ir.left + ir.width / 2 - br.left;
+    // RTL: pehla column sab se daayein (right) hota hai
+    for (let i = 1; i <= n; i++) {
+      const left = W - i * colW - (i - 1) * gap;
+      const right = W - (i - 1) * colW - (i - 1) * gap;
+      if (cx >= left && cx <= right) return i;
+    }
+    return cx < W - n * colW - (n - 1) * gap ? n : 1;
+  }
+  function splitTextAt(k) {
+    const full = $('in-body').value || '';
+    $('pv-text').textContent = full.slice(0, k);
+    $('pv-text-after').textContent = full.slice(k);
+  }
+  function placeImageInColumn() {
+    const body = $('pv-body');
+    const imgs = $('pv-images');
+    const text = $('in-body').value || '';
+    body.querySelectorAll('.pv-colbreak').forEach(d => d.remove());
+    const k = parseInt($('in-image-col').value, 10) || 1;
+    $('img-col-val').textContent = k;
+    $('in-image-col').disabled = !imageIsSingleCol();
+    if (!imgs.querySelector('img') || !imageIsSingleCol() || k <= 1) {
+      // Column 1 (ya tasveer na ho, ya tasveer poori chaudai ki ho):
+      // tasveer sab se pehle, poora text us ke baad
+      body.insertBefore(imgs, $('pv-text'));
+      splitTextAt(0);
+      updateDividers();
+      return;
+    }
+    // Tasveer ko column k ke upar rakhna hai: pehle pv-text ko tasveer
+    // se pehle lao, phir column-break div tasveer ko agle column mein le jaye.
+    body.insertBefore($('pv-text'), imgs);
+    const anchor = document.createElement('div');
+    anchor.className = 'pv-colbreak';
+    anchor.style.cssText = 'break-before: column; height: 0; margin: 0; padding: 0; line-height: 0; font-size: 0;';
+    body.insertBefore(anchor, imgs);
+    // Binary search: sab se bara K dhoondo jis par tasveer abhi bhi
+    // column k mein ho (is se pehle wala column poora bharta hai).
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      splitTextAt(mid);
+      if (imageColumnIndex() <= k) lo = mid; else hi = mid - 1;
+    }
+    splitTextAt(lo);
+    updateDividers();
+  }
+  $('in-image-col').addEventListener('input', () => {
+    $('img-col-val').textContent = $('in-image-col').value;
+    placeImageInColumn();
+  });
+  let __ncpResizeT = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(__ncpResizeT);
+    __ncpResizeT = setTimeout(placeImageInColumn, 150);
+  });
+  $('in-image-size').addEventListener('input', applyImageLayout);
+  $('in-image-pos').addEventListener('change', applyImageLayout);
+  $('in-image-full').addEventListener('change', applyImageLayout);
+  $('in-image-radius').addEventListener('input', applyImageLayout);
+
+  // ---- Columns (scroller: 2 se 5 tak) ----
+  function colCountVal() {
+    return parseInt($('in-columns').value, 10) || 3;
+  }
+  function applyColumnsOnly() {
+    const n = colCountVal();
+    $('columns-val').textContent = n;
+    $('pv-body').style.columnCount = n;
+    const span = $('in-image-span');
+    span.max = n;
+    if ($('in-image-span-auto').checked) {
+      span.value = n;
+      $('img-span-val').textContent = n;
+    } else if (parseInt(span.value, 10) > n) {
+      span.value = n;
+      $('img-span-val').textContent = n;
+    }
+    const icol = $('in-image-col');
+    icol.max = n;
+    if (parseInt(icol.value, 10) > n) {
+      icol.value = n;
+      $('img-col-val').textContent = n;
+    }
+    applyImageLayout();
+    updateDividers();
+  }
+  // Compact mode: lambi khabar aik page (~A4 height) se zyada ho to
+  // column khud barhte jayen (max 5 tak) taake lambai kam ho jaye aur
+  // cutting aik hi decent picture mein aa jaye. Slider se haath se
+  // ghataaya hua count tabdeel nahi hota jab tak text dobara na badle.
+  function fitToPage() {
+    if (!$('in-compact').checked) return;
+    const prev = $('preview');
+    let guard = 0;
+    while (prev.clientHeight > 2050 && colCountVal() < 5 && guard++ < 4) {
+      $('in-columns').value = colCountVal() + 1;
+      applyColumnsOnly();
+    }
+  }
+  function applyColumns() {
+    applyColumnsOnly();
+    fitToPage();
+  }
+  $('in-columns').addEventListener('input', applyColumnsOnly);
+  $('in-compact').addEventListener('change', () => {
+    applyColWidth();
+    applyColumns();
+  });
+  $('in-image-span').addEventListener('input', () => {
+    $('img-span-val').textContent = $('in-image-span').value;
+    applyImageLayout();
+  });
+  $('in-image-span-auto').addEventListener('change', e => {
+    $('in-image-span').disabled = e.target.checked;
+    if (e.target.checked) {
+      $('in-image-span').value = colCountVal();
+      $('img-span-val').textContent = colCountVal();
+    }
+    applyImageLayout();
+  });
+
+  // ---- Column ki chaudai (drag slider: 0 = Auto, pehle jaisa) ----
+  function actualColCount() {
+    const body = $('pv-body');
+    const w = body.clientWidth;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
+    const cw = parseFloat(body.style.columnWidth) || 0;
+    const sel = parseInt(body.style.columnCount || getComputedStyle(body).columnCount || '3', 10);
+    if (!cw) return sel;
+    let n = Math.floor((w + gap) / (cw + gap));
+    if (n < 1) n = 1;
+    if (sel && n > sel) n = sel;
+    return n;
+  }
+  function applyColWidth() {
+    const v = parseInt($('in-col-width').value, 10);
+    // Compact mode mein column ki tadad fix rehti hai (slider wali), is liye
+    // chaudai Auto rakhi jati hai — warna chaudai ki wajah se column kam ho
+    // jate the (masalan 3 ki jagah 2 ban jate the) aur cutting lambi ho jati thi.
+    if ($('in-compact').checked) {
+      $('col-width-val').textContent = 'Auto (compact)';
+      $('pv-body').style.columnWidth = '';
+      try { localStorage.setItem('ncp-col-width', String(v)); } catch (e) { /* ignore */ }
+      placeImageInColumn();
+      return;
+    }
+    $('col-width-val').textContent = v === 0 ? 'Auto' : v + ' px';
+    $('pv-body').style.columnWidth = v === 0 ? '' : v + 'px';
+    try { localStorage.setItem('ncp-col-width', String(v)); } catch (e) { /* ignore */ }
+    placeImageInColumn();
+  }
+  $('in-col-width').addEventListener('input', applyColWidth);
+
+  // ---- Column divider lines (preview + PNG dono mein nazar aayen) ----
+  // column-rule hata di: download wala tool use PNG mein nahi utarta,
+  // is liye asal divider divs banaye jate hain (2/3/4 — har tadad par).
+  // Line gap ke bilkul darmiyan hoti hai aur text us ke qareeb tak jata
+  // hai (gap sirf 10px) taake akhbaar jaisa professional look aaye.
+  function updateDividers() {
+    const body = $('pv-body');
+    body.querySelectorAll('.pv-divider').forEach(d => d.remove());
+    const n = actualColCount();
+    if (n < 2) return;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
+    const w = body.clientWidth;
+    const colW = (w - (n - 1) * gap) / n;
+    // Tasveer ki jagah maloom karo taake divider line us ke upar se na guzre:
+    // jis line ke raaste mein tasveer aaye, woh line tasveer ke neeche se shuru ho.
+    const imgs = $('pv-images');
+    let imgL = -1, imgR = -1, imgB = 0;
+    if (imgs.querySelector('img')) {
+      const br = body.getBoundingClientRect();
+      const ir = imgs.getBoundingClientRect();
+      imgL = ir.left - br.left;
+      imgR = ir.right - br.left;
+      imgB = ir.bottom - br.top;
+    }
+    for (let i = 1; i < n; i++) {
+      const x = i * colW + (i - 1) * gap + gap / 2 - 0.5;
+      const d = document.createElement('div');
+      d.className = 'pv-divider';
+      d.style.top = (imgL >= 0 && x >= imgL - 1 && x <= imgR + 1) ? (imgB + 14) + 'px' : '0px';
+      d.style.left = x + 'px';
+      body.appendChild(d);
+    }
+  }
+  window.addEventListener('resize', updateDividers);
+
+  // ---- Font sizes + body bold ----
+  function applyFontSizes() {
+    const h = $('in-font-heading').value;
+    const s = $('in-font-sub').value;
+    const b = $('in-font-body').value;
+    $('fs-heading-val').textContent = h;
+    $('fs-sub-val').textContent = s;
+    $('fs-body-val').textContent = b;
+    $('pv-main-heading').style.fontSize = h + 'px';
+    $('pv-sub-heading').style.fontSize = s + 'px';
+    $('pv-body').style.fontSize = b + 'px';
+    $('pv-body').style.fontWeight = $('in-body-bold').checked ? '700' : '400';
+    // Preview wali setting save rakho taake download bhi isi par ho aur
+    // dobara kholne par bhi wahi size mile (kuch save na ho to default 65/36/32)
+    try {
+      localStorage.setItem('ncp-font-sizes', JSON.stringify({
+        h: h, s: s, b: b, bold: $('in-body-bold').checked
+      }));
+    } catch (e) { /* private mode mein save na ho to koi baat nahi */ }
+    placeImageInColumn();
+  }
+  $('in-font-heading').addEventListener('input', applyFontSizes);
+  $('in-font-sub').addEventListener('input', applyFontSizes);
+  $('in-font-body').addEventListener('input', applyFontSizes);
+  $('in-body-bold').addEventListener('change', applyFontSizes);
+
+  // ---- Body ----
+  $('in-body').addEventListener('input', e => {
+    placeImageInColumn();
+    fitToPage();
+  });
+
+  // ---- Download (no limit) ----
+  $('btn-download').addEventListener('click', async () => {
+    const btn = $('btn-download');
+    btn.disabled = true;
+    btn.textContent = 'تیار ہو رہا ہے...';
+    try {
+      // Nastaliq font zaroor load ho jaye taake PNG mein bhi wohi font aaye
+      // (slider wale maujooda sizes ke mutabiq)
+      await document.fonts.load('700 ' + $('in-font-heading').value + 'px "Jameel Noori Nastaleeq"');
+      await document.fonts.load('700 ' + $('in-font-sub').value + 'px "Jameel Noori Nastaleeq"');
+      await document.fonts.load(($('in-body-bold').checked ? '700 ' : '400 ') + $('in-font-body').value + 'px "Jameel Noori Nastaleeq"');
+      await document.fonts.ready;
+      const preview = $('preview');
+      applyFontSizes(); // Download preview ke maujooda sizes par hi bane
+      updateDividers();
+      let canvas;
+      if ($('in-download-exact').checked) {
+        // Screen jaisa hi download: preview ki chaudai/on-screen layout
+        // bilkul tabdeel kiye baghair sirf scale barha kar HD banaya jaye.
+        // Is se pehle wala farq khatam hota hai (pehle download ke liye
+        // chaudai 1400px par force hoti thi, jis se columns/text dobara
+        // set ho jate the aur download screen se mukhtalif lagta tha).
+        const pw = preview.clientWidth || 1400;
+        const ph = preview.clientHeight || 1980;
+        // Canvas ki had (~16000px) ke andar rehte hue zyada se zyada scale
+        let scale = Math.min(8400 / pw, 16000 / ph);
+        let lastErr = null;
+        for (let i = 0; i < 4 && !canvas; i++) {
+          try {
+            canvas = await html2canvas(preview, { scale: scale, useCORS: true, backgroundColor: '#ffffff' });
+          } catch (e) { lastErr = e; scale = scale / 1.5; }
+        }
+        if (!canvas) throw lastErr || new Error('render failed');
+      } else {
+        // Purana tareeqa: download hamesha 1400px chaudai par bane
+        const oldW = preview.style.width;
+        const oldMaxW = preview.style.maxWidth;
+        preview.style.width = '1400px';
+        preview.style.maxWidth = 'none';
+        try {
+          // 8K Ultra HD JPEG: A4 (1400x1980) x scale 4 = 5600x7920px
+          canvas = await html2canvas(preview, { scale: 4, useCORS: true, backgroundColor: '#ffffff' });
+        } catch (e1) {
+          // Kamzor phone par scale 4 na ban sake to scale 3 par dobara try karo
+          canvas = await html2canvas(preview, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
+        } finally {
+          preview.style.width = oldW;
+          preview.style.maxWidth = oldMaxW;
+          updateDividers();
+        }
+      }
+      const a = document.createElement('a');
+      a.download = 'newspaper.jpg';
+      a.href = canvas.toDataURL('image/jpeg', 0.95);
+      a.click();
+    } catch (e) {
+      alert('ڈاؤن لوڈ میں مسئلہ ہوا، دوبارہ کوشش کریں');
+    }
+    btn.disabled = false;
+    btn.textContent = 'ڈاؤن لوڈ کریں';
+  });
+
+  // Default date = today
+  (function init() {
+    const t = urduLongDate(new Date());
+    $('in-date').value = t;
+    $('pv-date').textContent = t;
+    // Pehle save ki hui font sizes wapas lagao (agar hon)
+    try {
+      const saved = JSON.parse(localStorage.getItem('ncp-font-sizes') || 'null');
+      if (saved) {
+        if (saved.h) $('in-font-heading').value = saved.h;
+        if (saved.s) $('in-font-sub').value = saved.s;
+        if (saved.b) $('in-font-body').value = saved.b;
+        if (typeof saved.bold === 'boolean') $('in-body-bold').checked = saved.bold;
+      }
+    } catch (e) { /* ignore */ }
+    // Pehle save ki hui column chaudai wapas lagao (agar ho)
+    try {
+      const w = localStorage.getItem('ncp-col-width');
+      if (w !== null) $('in-col-width').value = w;
+    } catch (e) { /* ignore */ }
+    // Download-exact setting wapas lagao (default: ON)
+    try {
+      const d = localStorage.getItem('ncp-download-exact');
+      if (d !== null) $('in-download-exact').checked = d === '1';
+    } catch (e) { /* ignore */ }
+    $('in-download-exact').addEventListener('change', e => {
+      try { localStorage.setItem('ncp-download-exact', e.target.checked ? '1' : '0'); } catch (e2) { /* ignore */ }
+    });
+    // Pehle save kiye hue heading rang wapas lagao (main: koi rang nahi,
+    // sub: kala — default)
+    try {
+      const saved = JSON.parse(localStorage.getItem('ncp-heading-colors') || '{}');
+      setHeadingColor('main', saved.main || '', applyMainColor);
+      setHeadingColor('sub', saved.sub || '#111111', applySubColor);
+    } catch (e) { /* ignore */ }
+    applyFontSizes();
+    applyColWidth();
+    applyColumns();
+    updateDividers();
+  })();
+</script>
+</body>
+</html>
