@@ -629,6 +629,52 @@
     body.style.columnFill = prevFill;
     return h;
   }
+  // Text ki unchai seedha column wali chaudai par napo (tasveer
+  // chhupa kar, body ko aik column jitna chaura kar ke). Is se
+  // column wali unchai ka bilkul sahi andaza lagta hai.
+  function measureTextHCol() {
+    const body = $('pv-body');
+    const imgs = $('pv-images');
+    const prevDisplay = imgs.style.display;
+    const prevCount = body.style.columnCount;
+    const prevH = body.style.height;
+    const prevFill = body.style.columnFill;
+    const prevW = body.style.width;
+    const W = body.clientWidth || 1;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
+    const n = actualColCount();
+    const colW = (W - (n - 1) * gap) / n || 1;
+    imgs.style.display = 'none';
+    body.style.columnCount = '1';
+    body.style.height = '';
+    body.style.columnFill = '';
+    body.style.width = colW + 'px';
+    const h = body.scrollHeight || 0;
+    imgs.style.display = prevDisplay;
+    body.style.columnCount = prevCount;
+    body.style.height = prevH;
+    body.style.columnFill = prevFill;
+    body.style.width = prevW;
+    return h;
+  }
+  // Aakhri text character ka bottom (body ke top se) — is se pata
+  // chalta hai ke aakhri column kitna bhara hai.
+  function lastTextBottom() {
+    const body = $('pv-body');
+    const after = $('pv-text-after');
+    const before = $('pv-text');
+    const el = (after.textContent && after.textContent.length) ? after : before;
+    if (!el.textContent || !el.firstChild) return null;
+    try {
+      const r = document.createRange();
+      r.setStart(el.firstChild, el.textContent.length - 1);
+      r.setEnd(el.firstChild, el.textContent.length);
+      const b = r.getBoundingClientRect();
+      const br = body.getBoundingClientRect();
+      if (!b || !br) return null;
+      return b.bottom - br.top;
+    } catch (e) { return null; }
+  }
   // ---- Tasveer wale column ke neeche bhi text aaye (sequential fill) ----
   // Chrome ke balanced columns mein lambi tasveer apne column ko bhar
   // deti hai aur baaqi text agle column mein chala jata hai — tasveer ke
@@ -657,29 +703,25 @@
       return null;
     }
     const photoH = imgs.getBoundingClientRect().height || 0;
+    const textHCol = measureTextHCol();
     const lineH = parseFloat(getComputedStyle(body).lineHeight) || 48;
     const minUnder = 3 * lineH;
-    // Asal kul unchai balanced mode mein napo (formula se behtar) —
-    // is se columns barabar bharti hain. Nap ke baad layout wapas.
-    const prevFillB = body.style.columnFill;
-    const prevHB = body.style.height;
-    body.style.columnFill = 'balance';
-    body.style.height = '';
-    const balancedH = body.scrollHeight || 0;
-    body.style.columnFill = prevFillB;
-    body.style.height = prevHB;
-    const byTotal = balancedH + 6;
+    // Kul unchai: tasveer + text (text ki unchai seedha column wali
+    // chaudai par napi gayi hai, is liye andaza nahi lagana parta)
+    const total = photoH + textHCol;
+    const byTotal = Math.ceil(total / n) + 6;
     const byPhoto = photoH + minUnder;
     let h = Math.max(byTotal, byPhoto);
     const mode = byTotal >= byPhoto ? 'total' : 'photo-min';
     body.style.columnFill = 'auto';
     body.style.height = h + 'px';
     // Overflow guard: agar content phir bhi n columns se bahar nikle
-    // (chautha column ban jaye) to height barha kar dobara dekho.
+    // (chautha column ban jaye) to height aik aik line barha kar dobara
+    // dekho (x1.2 se overshoot ho jata tha, is liye line by line).
     let guard = 0;
-    while (guard++ < 3 &&
+    while (guard++ < 12 &&
       (body.scrollWidth > body.clientWidth + 2 || imageColumnIndex() > n)) {
-      h = Math.ceil(h * 1.2);
+      h += lineH;
       body.style.height = h + 'px';
     }
     return mode;
@@ -720,6 +762,36 @@
     splitTextAt(findSplitK(text, k));
     const mode = applySequentialFill();
     __ncpLastMode = mode;
+    // Guard ne height barhai ho to split dobara dhoondo (aakhri height
+    // ke mutabiq) — warna saara text tasveer se pehle atka rehta hai.
+    // Yahan dobara applySequentialFill() mat bulana (loop ban jayega).
+    splitTextAt(findSplitK(text, k));
+    // Aakhri column bhara hai ya nahi — asal layout dekh kar height
+    // theek karo (nap par bharosa nahi). Har dafa gap ka aik-nth hissa
+    // kam karo (poora gap kam karne se overflow ho jata hai — gap
+    // tamam columns mein bat-ta hai), max 8 dafa.
+    for (let ci = 0; ci < 8; ci++) {
+      const lastB = lastTextBottom();
+      if (lastB === null) break;
+      const curH = parseFloat(body.style.height) || body.clientHeight;
+      const lhPx = parseFloat(getComputedStyle(body).lineHeight) || 48;
+      const gap = curH - lastB;
+      if (gap <= lhPx * 1.5) break;
+      if (body.scrollWidth > body.clientWidth + 2 || imageColumnIndex() > actualColCount()) break;
+      const nCols = Math.max(actualColCount(), 1);
+      const gapLines = Math.floor(gap / lhPx);
+      const reduceLines = Math.max(1, Math.floor(gapLines / nCols));
+      const reduce = reduceLines * lhPx;
+      if (reduce <= 0) break;
+      const prevH = curH;
+      body.style.height = (curH - reduce) + 'px';
+      splitTextAt(findSplitK(text, k));
+      if (body.scrollWidth > body.clientWidth + 2 || imageColumnIndex() > actualColCount()) {
+        body.style.height = prevH + 'px';
+        splitTextAt(findSplitK(text, k));
+        break;
+      }
+    }
     updateDividers();
     equalizeColumns(mode);
     updateLinesPerColDisplay();
@@ -1002,15 +1074,11 @@
     const n = actualColCount();
     const photoH = (imgs.querySelector('img') && imageIsSingleCol())
       ? (imgs.getBoundingClientRect().height || 0) : 0;
-    const W = body.clientWidth || 1;
-    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
-    const colW = (W - (n - 1) * gap) / n || 1;
-    const scale = W / colW;
     // Aik font size par asal lines-fi-column napo (text + tasveer)
     function linesAt(fs) {
       body.style.fontSize = fs + 'px';
-      const textH1 = measureTextH1();
-      return (textH1 * scale + photoH) / (Math.max(n, 1) * fs * ratio);
+      const textHCol = measureTextHCol();
+      return (textHCol + photoH) / (Math.max(n, 1) * fs * ratio);
     }
     let lo = 12, hi = 100, best = parseFloat($('in-font-body').value) || 32;
     for (let i = 0; i < 7; i++) {
@@ -1151,6 +1219,14 @@
     applyLineHeight();
     updateDividers();
     updateLinesPerColDisplay();
+    // Font load hone ke baad layout dobara lagao — font na hone par
+    // napi hui unchai ghalat ho sakti hai (fallback font chaura hota hai)
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { placeImageInColumn(); }).catch(() => { /* ignore */ });
+    }
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('32px "Jameel Noori Nastaleeq"').then(() => { placeImageInColumn(); }).catch(() => { /* ignore */ });
+    }
   })();
 </script>
 </body>
