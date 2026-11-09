@@ -587,25 +587,43 @@
   // neeche khaali jagah reh jati hai. Is liye jab tasveer ho to preview
   // ki height fix karke columns ko tartib se bharte hain: pehla column
   // poora bhare, phir dusra — text tasveer ke neeche usi column mein
-  // aata hai, bilkul akhbaar ki tarah. Tasveer na ho to pehle jaisa
-  // (balanced) rehta hai.
+  // aata hai, bilkul akhbaar ki tarah. Height itni rakhi jati hai ke
+  // tasveer ke neeche kam se kam 3 lines text aa sake (lambi tasveer
+  // ho to column us ke mutabiq lamba ho jata hai). Tasveer na ho ya
+  // tasveer poori chaudai ki ho to pehle jaisa (balanced) rehta hai.
   function applySequentialFill() {
     const body = $('pv-body');
     const imgs = $('pv-images');
-    if (!imgs.querySelector('img')) {
+    if (!imgs.querySelector('img') || !imageIsSingleCol()) {
       body.style.height = '';
       body.style.columnFill = '';
       return;
     }
-    // Taaza nap ke liye pehle height hatao, phir balanced height naapo
+    const n = actualColCount();
+    if (n <= 1) {
+      body.style.height = '';
+      body.style.columnFill = '';
+      return;
+    }
+    // Tasveer ki unchai (column wali chaudai par)
+    const photoH = imgs.getBoundingClientRect().height || 0;
+    // Text ki unchai aik column mein: tasveer chhupa kar aik column
+    // mein napo (poori chaudai par), phir column ki tadad se zarb do
+    const prevDisplay = imgs.style.display;
+    imgs.style.display = 'none';
+    body.style.columnCount = '1';
     body.style.height = '';
     body.style.columnFill = '';
-    const h = body.scrollHeight || body.clientHeight || 0;
-    const n = actualColCount();
-    if (h > 0 && n > 1) {
-      body.style.columnFill = 'auto';
-      body.style.height = h + 'px';
-    }
+    const textH1 = body.scrollHeight || 0;
+    imgs.style.display = prevDisplay;
+    body.style.columnCount = String(n);
+    // Aik line ki unchai — tasveer ke neeche kam se kam 3 lines
+    const lineH = parseFloat(getComputedStyle(body).lineHeight) || 48;
+    const minUnder = 3 * lineH;
+    const total = photoH + textH1 * n;
+    const h = Math.max(Math.ceil(total / n * 1.02) + 10, photoH + minUnder);
+    body.style.columnFill = 'auto';
+    body.style.height = h + 'px';
   }
   function placeImageInColumn() {
     const body = $('pv-body');
