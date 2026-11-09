@@ -1,0 +1,22 @@
+name: Unzip site
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract site files
+        run: |
+          unzip -o news-cutting-pro-cloudflare.zip
+          ls -R | head -50
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          rm -f news-cutting-pro-cloudflare.zip
+          git add -A
+          git commit -m "Extract site files from ZIP" || echo "nothing to commit"
+          git push
