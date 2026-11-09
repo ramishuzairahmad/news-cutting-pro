@@ -212,7 +212,7 @@
     text-align: justify;
     line-height: 1.5;
     column-count: 3;
-    column-gap: 10px;
+    column-gap: 20px;
   }
   .pv-divider {
     position: absolute;
@@ -945,6 +945,15 @@
   }
   window.addEventListener('resize', updateDividers);
 
+  // Column ke darmiyan gap — Nastaleeq ki lambi strokes divider line
+  // par na chadhein, is liye gap font size ke mutabiq rakho (jitna bara
+  // font, utna zyada gap). Kam se kam 20px.
+  function applyColumnGap() {
+    const fs = parseFloat($('in-font-body').value) || 32;
+    const gap = Math.max(20, Math.round(fs * 0.4));
+    $('pv-body').style.columnGap = gap + 'px';
+  }
+
   // ---- Font sizes + body bold ----
   function applyFontSizes() {
     const h = $('in-font-heading').value;
@@ -964,6 +973,8 @@
         h: h, s: s, b: b, bold: $('in-body-bold').checked
       }));
     } catch (e) { /* private mode mein save na ho to koi baat nahi */ }
+    // Column gap font size ke mutabiq set karo (divider par text na chadhe)
+    applyColumnGap();
     placeImageInColumn();
   }
   $('in-font-heading').addEventListener('input', applyFontSizes);
