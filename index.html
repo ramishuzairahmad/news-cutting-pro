@@ -353,7 +353,7 @@
     <div class="field">
       <div class="field-head">
         <label>خبر کا متن:</label>
-        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-body" min="12" max="100" value="32" step="5"> <span class="fs-val" id="fs-body-val">32</span> px <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" id="in-body-bold" checked> بولڈ</label></span>
+        <span class="fs-inline">فونٹ سائز: <button type="button" id="btn-font-minus" title="فونٹ چھوٹا کریں" style="width:26px;height:26px;font-size:18px;line-height:1;cursor:pointer;">−</button> <input type="range" id="in-font-body" min="12" max="100" value="32" step="5"> <button type="button" id="btn-font-plus" title="فونٹ بڑا کریں" style="width:26px;height:26px;font-size:18px;line-height:1;cursor:pointer;">+</button> <span class="fs-val" id="fs-body-val">32</span> px <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" id="in-body-bold" checked> بولڈ</label></span>
       </div>
       <div class="field-head" style="margin-top:8px;">
         <label>لائنوں کا فاصلہ:</label>
@@ -946,14 +946,6 @@
   window.addEventListener('resize', updateDividers);
 
   // Column ke darmiyan gap — Nastaleeq ki lambi strokes divider line
-  // par na chadhein, is liye gap font size ke mutabiq rakho (jitna bara
-  // font, utna zyada gap). Kam se kam 20px.
-  function applyColumnGap() {
-    const fs = parseFloat($('in-font-body').value) || 32;
-    const gap = Math.max(20, Math.round(fs * 0.4));
-    $('pv-body').style.columnGap = gap + 'px';
-  }
-
   // ---- Font sizes + body bold ----
   function applyFontSizes() {
     const h = $('in-font-heading').value;
@@ -973,14 +965,23 @@
         h: h, s: s, b: b, bold: $('in-body-bold').checked
       }));
     } catch (e) { /* private mode mein save na ho to koi baat nahi */ }
-    // Column gap font size ke mutabiq set karo (divider par text na chadhe)
-    applyColumnGap();
     placeImageInColumn();
   }
   $('in-font-heading').addEventListener('input', applyFontSizes);
   $('in-font-sub').addEventListener('input', applyFontSizes);
   $('in-font-body').addEventListener('input', applyFontSizes);
   $('in-body-bold').addEventListener('change', applyFontSizes);
+  // Font size ke + / − button (bada / chhota karne ke liye)
+  $('btn-font-minus').addEventListener('click', () => {
+    const el = $('in-font-body');
+    el.value = Math.max(12, (parseFloat(el.value) || 32) - 5);
+    applyFontSizes();
+  });
+  $('btn-font-plus').addEventListener('click', () => {
+    const el = $('in-font-body');
+    el.value = Math.min(100, (parseFloat(el.value) || 32) + 5);
+    applyFontSizes();
+  });
 
   // ---- Lainen ka fasla (line-height slider) ----
   // Default 1.5 (pehle 2.2 tha — linein bahut door door thin, kam text
