@@ -956,6 +956,11 @@
   }
   $('in-image-col').addEventListener('input', () => {
     $('img-col-val').textContent = $('in-image-col').value;
+    // Column badalne par position bhi usi hisaab se dikhao (pehla = left,
+    // aakhri = right, warna center) taake dono control aik hi baat kahen.
+    const n = colCountVal();
+    const c = parseInt($('in-image-col').value, 10) || 1;
+    $('in-image-pos').value = c <= 1 ? 'left' : (c >= n ? 'right' : 'center');
     placeImageInColumn();
   });
   let __ncpResizeT = null;
@@ -976,8 +981,23 @@
     const n = colCountVal();
     const spanV = $('in-image-span-auto').checked ? n : (parseInt($('in-image-span').value, 10) || 1);
     const sizeEl = $('in-image-size');
-    if (!full && spanV === 1 && parseInt(sizeEl.value, 10) >= 100) {
-      sizeEl.value = '60';
+    if (!full && spanV === 1) {
+      // Position ka matlab hai cutting mein tasveer kis taraf ho:
+      // "left" = pehla (sab se baayein wala) column, "right" = aakhri
+      // (sab se daayein wala) column, "center" = beech wala column.
+      // Sirf usi column ke andar float karne se tasveer page ke aik hi
+      // taraf rehti thi aur "move nahi hoti" lagti thi — is liye position
+      // badalne par tasveer ka column bhi badal jata hai.
+      const pos = $('in-image-pos').value;
+      const icol = $('in-image-col');
+      const target = pos === 'left' ? 1 : (pos === 'right' ? n : Math.ceil(n / 2));
+      if (parseInt(icol.value, 10) !== target) {
+        icol.value = String(target);
+        $('img-col-val').textContent = String(target);
+      }
+      if (parseInt(sizeEl.value, 10) >= 100) {
+        sizeEl.value = '60';
+      }
     }
     applyImageLayout();
   });
