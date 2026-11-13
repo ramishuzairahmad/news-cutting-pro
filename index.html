@@ -982,15 +982,25 @@
     applyColumnsOnly();
     fitToPage();
   }
-  $('in-columns').addEventListener('input', applyColumnsOnly);
+  // Count badalne par chaudai Auto ho jati hai taake dono aapas mein na laren
+  // (warna chaudai lagi ho to browser count ko kaat deta hai aur slider dummy lagta hai).
+  $('in-columns').addEventListener('input', () => {
+    $('in-col-width').value = '0';
+    applyColWidth();
+    applyColumnsOnly();
+  });
   // Column quick buttons (1, 2, 3, 4) — chhoti khabar ke liye 1 bhi
   document.querySelectorAll('.col-btns button').forEach(b => {
     b.addEventListener('click', () => {
       $('in-columns').value = b.dataset.cols;
+      $('in-col-width').value = '0';
+      applyColWidth();
       applyColumnsOnly();
     });
   });
   $('in-compact').addEventListener('change', () => {
+    // Compact on karne par chaudai Auto ho jati hai (compact mein tadad fix hoti hai)
+    if ($('in-compact').checked) $('in-col-width').value = '0';
     applyColWidth();
     applyColumns();
   });
@@ -1022,22 +1032,44 @@
   }
   function applyColWidth() {
     const v = parseInt($('in-col-width').value, 10);
+    try { localStorage.setItem('ncp-col-width', String(v)); } catch (e) { /* ignore */ }
     // Compact mode mein column ki tadad fix rehti hai (slider wali), is liye
-    // chaudai Auto rakhi jati hai — warna chaudai ki wajah se column kam ho
-    // jate the (masalan 3 ki jagah 2 ban jate the) aur cutting lambi ho jati thi.
+    // chaudai Auto rakhi jati hai.
     if ($('in-compact').checked) {
+      $('in-col-width').value = '0';
       $('col-width-val').textContent = 'Auto (compact)';
       $('pv-body').style.columnWidth = '';
-      try { localStorage.setItem('ncp-col-width', String(v)); } catch (e) { /* ignore */ }
       placeImageInColumn();
       return;
     }
-    $('col-width-val').textContent = v === 0 ? 'Auto' : v + ' px';
-    $('pv-body').style.columnWidth = v === 0 ? '' : v + 'px';
-    try { localStorage.setItem('ncp-col-width', String(v)); } catch (e) { /* ignore */ }
-    placeImageInColumn();
+    if (v === 0) {
+      $('col-width-val').textContent = 'Auto';
+      $('pv-body').style.columnWidth = '';
+      placeImageInColumn();
+      return;
+    }
+    // Chaudai lag gayi: column itne chaude hon. Column-count bhi chaudai
+    // se nikalo taake slider ki har value par asar nazar aaye — warna
+    // column-count ki wajah se chhoti chaudai ka koi asar nahi parta tha
+    // aur slider dummy lagta tha.
+    $('col-width-val').textContent = v + ' px';
+    $('pv-body').style.columnWidth = v + 'px';
+    const body = $('pv-body');
+    const w = body.clientWidth || 1400;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 20;
+    let n = Math.floor((w + gap) / (v + gap));
+    if (n < 1) n = 1;
+    if (n > 5) n = 5;
+    $('in-columns').value = String(n);
+    applyColumnsOnly();
   }
-  $('in-col-width').addEventListener('input', applyColWidth);
+  // Chaudai lagane ke liye compact band karna parta hai (compact mein
+  // column ki tadad khud badalti hai) — checkbox khud hi uncheck ho jata hai.
+  $('in-col-width').addEventListener('input', () => {
+    const v = parseInt($('in-col-width').value, 10);
+    if (v > 0 && $('in-compact').checked) $('in-compact').checked = false;
+    applyColWidth();
+  });
 
   // ---- Column divider lines (preview + PNG dono mein nazar aayen) ----
   // column-rule hata di: download wala tool use PNG mein nahi utarta,
