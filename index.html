@@ -695,8 +695,11 @@
       wrap.classList.add('center-full');
       wrap.style.width = Math.round(spanV / n * 100) + '%';
     } else if (pos === 'center') {
-      // Poori cutting ke beech mein (sirf aik column ke beech mein nahi)
-      wrap.classList.add('center-full');
+      // Beech wala column: tasveer usi column ke beech mein (float-center),
+      // poori cutting par nahi. Pehle yahan 'center-full' lagta tha jis
+      // mein column-span: all hota hai — wohi wajah thi ke center par
+      // tasveer poori chaudai par phel jati thi.
+      wrap.classList.add('float-center');
       wrap.style.width = p + '%';
     } else {
       wrap.classList.add(pos === 'left' ? 'float-left' : 'float-right');
@@ -721,7 +724,10 @@
     const pos = $('in-image-pos').value;
     const n = colCountVal();
     const spanV = $('in-image-span-auto').checked ? n : (parseInt($('in-image-span').value, 10) || 1);
-    return !full && spanV === 1 && pos !== 'center';
+    // Center bhi aik hi column ki tasveer hai (beech wala column) — pehle
+    // pos !== 'center' ki shart ki wajah se center par tasveer column
+    // wali jagah par nahi, poori cutting ke upar aa jati thi.
+    return !full && spanV === 1;
   }
   function imageColumnIndex() {
     const body = $('pv-body');
@@ -956,11 +962,12 @@
   }
   $('in-image-col').addEventListener('input', () => {
     $('img-col-val').textContent = $('in-image-col').value;
-    // Column badalne par position bhi usi hisaab se dikhao (pehla = left,
-    // aakhri = right, warna center) taake dono control aik hi baat kahen.
+    // Column badalne par position bhi usi hisaab se dikhao — RTL: column 1
+    // sab se daayein hota hai (right), aakhri column sab se baayein (left),
+    // beech wala center — taake dono control aik hi baat kahen.
     const n = colCountVal();
     const c = parseInt($('in-image-col').value, 10) || 1;
-    $('in-image-pos').value = c <= 1 ? 'left' : (c >= n ? 'right' : 'center');
+    $('in-image-pos').value = c <= 1 ? 'right' : (c >= n ? 'left' : 'center');
     placeImageInColumn();
   });
   let __ncpResizeT = null;
@@ -982,15 +989,14 @@
     const spanV = $('in-image-span-auto').checked ? n : (parseInt($('in-image-span').value, 10) || 1);
     const sizeEl = $('in-image-size');
     if (!full && spanV === 1) {
-      // Position ka matlab hai cutting mein tasveer kis taraf ho:
-      // "left" = pehla (sab se baayein wala) column, "right" = aakhri
-      // (sab se daayein wala) column, "center" = beech wala column.
-      // Sirf usi column ke andar float karne se tasveer page ke aik hi
-      // taraf rehti thi aur "move nahi hoti" lagti thi — is liye position
-      // badalne par tasveer ka column bhi badal jata hai.
+      // Position ka matlab hai cutting mein tasveer kis taraf ho.
+      // Page RTL hai: column 1 sab se DAAYEIN hota hai aur column n
+      // sab se BAAYEIN — is liye "left" = column n, "right" = column 1,
+      // "center" = beech wala column. (Pehle ulta tha: left column 1
+      // par jata tha jo daayein taraf nazar aata tha.)
       const pos = $('in-image-pos').value;
       const icol = $('in-image-col');
-      const target = pos === 'left' ? 1 : (pos === 'right' ? n : Math.ceil(n / 2));
+      const target = pos === 'left' ? n : (pos === 'right' ? 1 : Math.ceil(n / 2));
       if (parseInt(icol.value, 10) !== target) {
         icol.value = String(target);
         $('img-col-val').textContent = String(target);
