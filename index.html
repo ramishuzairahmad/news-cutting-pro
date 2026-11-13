@@ -57,12 +57,14 @@
   .field select {
     width: 100%;
     font-family: inherit;
-    font-size: 16px;
+    font-size: 20px;
     padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 8px;
     line-height: 2.2;
   }
+  /* خبر لکھتے وقت متن بڑا اور صاف نظر آئے (پہلے 16px بہت چھوٹا تھا) */
+  #in-body { font-size: 22px; }
   .field textarea { min-height: 150px; resize: vertical; }
   .field input[type="range"] { width: 100%; }
   .col-btns button {
@@ -164,7 +166,7 @@
   #pv-logo { display: none; max-width: 100%; }
   #pv-date {
     text-align: center;
-    font-size: 16px;
+    font-size: 24px;
     color: #000;
     border-top: 2px solid #111;
     border-bottom: 2px solid #111;
@@ -172,7 +174,7 @@
     margin: 10px 0 14px;
   }
   #pv-main-heading {
-    font-size: 65px;
+    font-size: 70px;
     font-weight: 700;
     text-align: center;
     line-height: 1.8;
@@ -181,7 +183,7 @@
   #pv-sub-heading {
     background: #111;
     color: #fff;
-    font-size: 36px;
+    font-size: 40px;
     font-weight: 600;
     text-align: center;
     line-height: 1.8;
@@ -203,13 +205,14 @@
   #pv-caption {
     display: none;
     text-align: center;
-    font-size: 18px;
+    font-size: 36px;
+    line-height: 1.8;
     font-weight: 700;
     margin-top: 6px;
   }
   #pv-body {
     position: relative;
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 700;
     text-align: justify;
     line-height: 1.5;
@@ -230,6 +233,34 @@
     font-size: 14px;
     margin-top: 18px;
   }
+  /* پری ویو زوم بار (صرف دیکھنے کے لیے — ڈاؤن لوڈ پر اثر نہیں) */
+  .zoom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .zoom-bar > label { font-weight: 700; font-size: 17px; margin-bottom: 0; }
+  .zoom-bar button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 4px 14px;
+    margin-left: 6px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .zoom-bar button:hover { background: #f0f0f0; }
+  .zoom-bar button.sel { background: #111; color: #fff; border-color: #111; }
+  #preview-zoom-wrap { position: relative; }
 </style>
 </head>
 <body>
@@ -243,8 +274,8 @@
         <input type="file" id="in-logo" accept="image/*">
       </div>
       <div class="field">
-        <label>سائز: <span id="logo-size-val">150</span> px</label>
-        <input type="range" id="in-logo-size" min="50" max="400" value="150">
+        <label>سائز: <span id="logo-size-val">180</span> px</label>
+        <input type="range" id="in-logo-size" min="50" max="400" value="180">
       </div>
       <div class="field">
         <label>سیدھ:</label>
@@ -270,12 +301,16 @@
         <button type="button" class="btn-date" id="btn-tomorrow">کل</button>
       </div>
       <input type="text" id="in-date" placeholder="تاریخ لکھیں" style="margin-top:8px">
+      <div class="field-head" style="margin-top:8px;">
+        <label>تاریخ کا سائز:</label>
+        <span class="fs-inline"><input type="range" id="in-date-size" min="12" max="60" step="2" value="24"> <span class="fs-val" id="date-size-val">24</span> px</span>
+      </div>
     </div>
 
     <div class="field">
       <div class="field-head">
         <label>مین ہیڈنگ:</label>
-        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-heading" min="20" max="100" value="65" step="5"> <span class="fs-val" id="fs-heading-val">65</span> px</span>
+        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-heading" min="20" max="100" value="70" step="5"> <span class="fs-val" id="fs-heading-val">70</span> px</span>
       </div>
       <input type="text" id="in-main-heading" placeholder="مین ہیڈنگ لکھیں">
       <div class="swatches" id="sw-main"><span class="sw-label">رنگ:</span></div>
@@ -284,7 +319,7 @@
     <div class="field">
       <div class="field-head">
         <label>سب ہیڈنگ:</label>
-        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-sub" min="11" max="100" value="36" step="5"> <span class="fs-val" id="fs-sub-val">36</span> px</span>
+        <span class="fs-inline">فونٹ سائز: <input type="range" id="in-font-sub" min="11" max="100" value="40" step="5"> <span class="fs-val" id="fs-sub-val">40</span> px</span>
       </div>
       <input type="text" id="in-sub-heading" placeholder="سب ہیڈنگ لکھیں">
       <div class="swatches" id="sw-sub"><span class="sw-label">رنگ:</span></div>
@@ -350,12 +385,16 @@
     <div class="field">
       <label>تصویر کی تحریر (caption):</label>
       <input type="text" id="in-caption" placeholder="تصویر کے نیچے لکھنے والی تحریر">
+      <div class="field-head" style="margin-top:8px;">
+        <label>تحریر کا سائز:</label>
+        <span class="fs-inline"><input type="range" id="in-caption-size" min="18" max="80" step="2" value="36"> <span class="fs-val" id="caption-size-val">36</span> px</span>
+      </div>
     </div>
 
     <div class="field">
       <div class="field-head">
         <label>خبر کا متن:</label>
-        <span class="fs-inline">فونٹ سائز: <button type="button" id="btn-font-minus" title="فونٹ چھوٹا کریں" style="width:26px;height:26px;font-size:18px;line-height:1;cursor:pointer;">−</button> <input type="range" id="in-font-body" min="12" max="100" value="32" step="5"> <button type="button" id="btn-font-plus" title="فونٹ بڑا کریں" style="width:26px;height:26px;font-size:18px;line-height:1;cursor:pointer;">+</button> <span class="fs-val" id="fs-body-val">32</span> px <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" id="in-body-bold" checked> بولڈ</label></span>
+        <span class="fs-inline">فونٹ سائز: <button type="button" id="btn-font-minus" title="فونٹ چھوٹا کریں" style="width:26px;height:26px;font-size:18px;line-height:1;cursor:pointer;">−</button> <input type="range" id="in-font-body" min="12" max="100" value="36" step="5"> <button type="button" id="btn-font-plus" title="فونٹ بڑا کریں" style="width:26px;height:26px;font-size:18px;line-height:1;cursor:pointer;">+</button> <span class="fs-val" id="fs-body-val">36</span> px <label style="margin-right:10px; cursor:pointer;"><input type="checkbox" id="in-body-bold" checked> بولڈ</label></span>
       </div>
       <div class="field-head" style="margin-top:8px;">
         <label>لائنوں کا فاصلہ:</label>
@@ -378,6 +417,17 @@
     <button type="button" class="btn-download" id="btn-download">ڈاؤن لوڈ کریں</button>
   </div>
 
+  <div class="zoom-bar" id="zoom-bar">
+    <label>پری ویو زوم (صرف دیکھنے کے لیے — ڈاؤن لوڈ پر اثر نہیں):</label>
+    <span class="fs-inline">
+      <button type="button" data-zoom="1" class="sel">100%</button>
+      <button type="button" data-zoom="1.5">150%</button>
+      <button type="button" data-zoom="2">200%</button>
+      <input type="range" id="in-zoom" min="50" max="200" step="25" value="100">
+      <span class="fs-val" id="zoom-val">100%</span>
+    </span>
+  </div>
+  <div id="preview-zoom-wrap">
   <div id="preview">
     <div id="pv-logo-wrap" class="align-center">
       <img id="pv-logo" alt="">
@@ -386,6 +436,7 @@
     <div id="pv-main-heading"></div>
     <div id="pv-sub-heading" style="display:none"></div>
     <div id="pv-body"><div id="pv-images" class="float-right"><div id="pv-caption"></div></div><span id="pv-text"></span><span id="pv-text-after"></span></div>
+  </div>
   </div>
 
   <p class="hint">نیوز کٹنگ پرو — لامحدود ڈاؤن لوڈز</p>
@@ -399,6 +450,58 @@
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
   }
+
+  // ---- Preview zoom (sirf dekhne ke liye) ----
+  // Zoom transform se hota hai — layout (columns/text) bilkul nahi
+  // badalta, is liye download pehle jaisa hi rehta hai. Layout napne
+  // wale functions (placeImageInColumn / updateDividers) zoom 1 par
+  // chalte hain, warna getBoundingClientRect ghalat napta hai.
+  var __ncpZoom = 1;
+  function setZoom(z) {
+    __ncpZoom = z;
+    const pv = $('preview'), wrap = $('preview-zoom-wrap');
+    if (!pv || !wrap) return;
+    if (z === 1) {
+      pv.style.transform = '';
+      wrap.style.height = '';
+      wrap.style.width = '';
+    } else {
+      pv.style.transform = 'scale(' + z + ')';
+      pv.style.transformOrigin = 'top right';
+      wrap.style.height = Math.round(pv.offsetHeight * z) + 'px';
+      wrap.style.width = Math.round(pv.offsetWidth * z) + 'px';
+    }
+    const zv = $('zoom-val'); if (zv) zv.textContent = Math.round(z * 100) + '%';
+    const zs = $('in-zoom'); if (zs) zs.value = String(Math.round(z * 100));
+    document.querySelectorAll('#zoom-bar [data-zoom]').forEach(b =>
+      b.classList.toggle('sel', Math.abs(parseFloat(b.dataset.zoom) - z) < 0.001));
+  }
+  document.querySelectorAll('#zoom-bar [data-zoom]').forEach(b => {
+    b.addEventListener('click', () => setZoom(parseFloat(b.dataset.zoom) || 1));
+  });
+  $('in-zoom').addEventListener('input', e => setZoom((parseFloat(e.target.value) || 100) / 100));
+  window.addEventListener('resize', () => { if (__ncpZoom !== 1) setZoom(__ncpZoom); });
+
+  // ---- Tariq ka size (slider) ----
+  function applyDateSize() {
+    const v = $('in-date-size').value;
+    $('date-size-val').textContent = v;
+    $('pv-date').style.fontSize = v + 'px';
+    try { localStorage.setItem('ncp-date-size', String(v)); } catch (e) { /* ignore */ }
+  }
+  $('in-date-size').addEventListener('input', applyDateSize);
+
+  // ---- Caption ka size (slider) ----
+  // Caption tasveer ke block ke andar hai, is liye us ka size badalne
+  // par tasveer ki jagah dobara lagani parti hai.
+  function applyCaptionSize() {
+    const v = $('in-caption-size').value;
+    $('caption-size-val').textContent = v;
+    $('pv-caption').style.fontSize = v + 'px';
+    try { localStorage.setItem('ncp-caption-size', String(v)); } catch (e) { /* ignore */ }
+    placeImageInColumn();
+  }
+  $('in-caption-size').addEventListener('input', applyCaptionSize);
 
   // ---- Logo ----
   $('in-logo').addEventListener('change', e => {
@@ -729,6 +832,14 @@
     return mode;
   }
   function placeImageInColumn() {
+    if (__ncpZoom !== 1) {
+      const z = __ncpZoom; setZoom(1);
+      try { placeImageInColumnInner(); } finally { setZoom(z); }
+      return;
+    }
+    placeImageInColumnInner();
+  }
+  function placeImageInColumnInner() {
     const body = $('pv-body');
     const imgs = $('pv-images');
     const text = $('in-body').value || '';
@@ -808,7 +919,23 @@
     __ncpResizeT = setTimeout(placeImageInColumn, 150);
   });
   $('in-image-size').addEventListener('input', applyImageLayout);
-  $('in-image-pos').addEventListener('change', applyImageLayout);
+  // Jagah (daayein/baayein/center) badalne par tasveer waqai hilti
+  // nazar aani chahiye. Live test se confirm hua: size 100% par tasveer
+  // poora column bhar leti hai, is liye float left/right ka koi asar
+  // nazar nahi aata (x bilkul wohi rehta hai); 60% par tasveer 173px
+  // hilti hai. Is liye position badalte waqt size 100% ho to use 60%
+  // kar do taake tasveer hilti nazar aaye — slider bhi wahi dikhaye ga.
+  // (Size baad mein wapas 100% karna ho to slider se ho jata hai.)
+  $('in-image-pos').addEventListener('change', () => {
+    const full = $('in-image-full').checked;
+    const n = colCountVal();
+    const spanV = $('in-image-span-auto').checked ? n : (parseInt($('in-image-span').value, 10) || 1);
+    const sizeEl = $('in-image-size');
+    if (!full && spanV === 1 && parseInt(sizeEl.value, 10) >= 100) {
+      sizeEl.value = '60';
+    }
+    applyImageLayout();
+  });
   $('in-image-full').addEventListener('change', applyImageLayout);
   $('in-image-radius').addEventListener('input', applyImageLayout);
 
@@ -918,6 +1045,14 @@
   // Line gap ke bilkul darmiyan hoti hai aur text us ke qareeb tak jata
   // hai (gap sirf 10px) taake akhbaar jaisa professional look aaye.
   function updateDividers() {
+    if (__ncpZoom !== 1) {
+      const z = __ncpZoom; setZoom(1);
+      try { updateDividersInner(); } finally { setZoom(z); }
+      return;
+    }
+    updateDividersInner();
+  }
+  function updateDividersInner() {
     const body = $('pv-body');
     body.querySelectorAll('.pv-divider').forEach(d => d.remove());
     const n = actualColCount();
@@ -1125,6 +1260,8 @@
     const btn = $('btn-download');
     btn.disabled = true;
     btn.textContent = 'تیار ہو رہا ہے...';
+    // Zoom sirf dekhne ke liye hai — download hamesha zoom 1 par bane
+    const __z0 = __ncpZoom; if (__z0 !== 1) setZoom(1);
     try {
       // Nastaliq font zaroor load ho jaye taake PNG mein bhi wohi font aaye
       // (slider wale maujooda sizes ke mutabiq)
@@ -1178,6 +1315,7 @@
     } catch (e) {
       alert('ڈاؤن لوڈ میں مسئلہ ہوا، دوبارہ کوشش کریں');
     }
+    if (__z0 !== 1) setZoom(__z0);
     btn.disabled = false;
     btn.textContent = 'ڈاؤن لوڈ کریں';
   });
@@ -1217,6 +1355,15 @@
       const d = localStorage.getItem('ncp-download-exact');
       if (d !== null) $('in-download-exact').checked = d === '1';
     } catch (e) { /* ignore */ }
+    // Date aur caption ke size wapas lagao (default: 24 / 36)
+    try {
+      const ds = localStorage.getItem('ncp-date-size');
+      if (ds !== null) $('in-date-size').value = ds;
+    } catch (e) { /* ignore */ }
+    try {
+      const cs = localStorage.getItem('ncp-caption-size');
+      if (cs !== null) $('in-caption-size').value = cs;
+    } catch (e) { /* ignore */ }
     $('in-download-exact').addEventListener('change', e => {
       try { localStorage.setItem('ncp-download-exact', e.target.checked ? '1' : '0'); } catch (e2) { /* ignore */ }
     });
@@ -1231,6 +1378,8 @@
     applyColWidth();
     applyColumns();
     applyLineHeight();
+    applyDateSize();
+    applyCaptionSize();
     updateDividers();
     updateLinesPerColDisplay();
     // Font load hone ke baad layout dobara lagao — font na hone par
