@@ -151,6 +151,10 @@
 
   /* ===== Newspaper preview ===== */
   #preview {
+    width: 1400px;
+    max-width: none;
+    box-sizing: border-box;
+    transform-origin: top right;
     background: #ffffff;
     color: #000;
     min-height: 1980px;
@@ -223,8 +227,8 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 1px;
-    background: #333;
+    width: 2px;
+    background: #222;
     pointer-events: none;
   }
   .hint {
@@ -260,7 +264,7 @@
   }
   .zoom-bar button:hover { background: #f0f0f0; }
   .zoom-bar button.sel { background: #111; color: #fff; border-color: #111; }
-  #preview-zoom-wrap { position: relative; }
+  #preview-zoom-wrap { position: relative; overflow: hidden; }
 </style>
 </head>
 <body>
@@ -460,20 +464,37 @@
   // wale functions (placeImageInColumn / updateDividers) zoom 1 par
   // chalte hain, warna getBoundingClientRect ghalat napta hai.
   var __ncpZoom = 1;
-  function setZoom(z) {
-    __ncpZoom = z;
+  var __ncpRawDepth = 0;
+  // Cutting hamesha 1400px chaudi banti hai (akhbaar ka page) — mobile ho
+  // ya laptop. Chhoti screen par sirf dikhane ke liye chhoti (scale) ki
+  // jati hai, is liye columns aur darmiyani lakeerein har screen par aik
+  // jaisi rehti hain aur download bhi bilkul wohi hota hai.
+  function fitScale() {
+    const wrap = $('preview-zoom-wrap');
+    const c = (wrap && wrap.parentElement) ? wrap.parentElement.clientWidth : 1400;
+    return Math.min(1, (c || 1400) / 1400);
+  }
+  function applyTransform() {
     const pv = $('preview'), wrap = $('preview-zoom-wrap');
     if (!pv || !wrap) return;
-    if (z === 1) {
+    const s = __ncpRawDepth > 0 ? 1 : fitScale() * __ncpZoom;
+    if (__ncpRawDepth > 0) {
       pv.style.transform = '';
-      wrap.style.height = '';
-      wrap.style.width = '';
-    } else {
-      pv.style.transform = 'scale(' + z + ')';
-      pv.style.transformOrigin = 'top right';
-      wrap.style.height = Math.round(pv.offsetHeight * z) + 'px';
-      wrap.style.width = Math.round(pv.offsetWidth * z) + 'px';
+      return;
     }
+    pv.style.transform = Math.abs(s - 1) < 0.0005 ? '' : 'scale(' + s + ')';
+    wrap.style.height = Math.ceil(pv.offsetHeight * s) + 'px';
+    wrap.style.width = Math.ceil(pv.offsetWidth * s) + 'px';
+  }
+  // Napne wale kaam (columns / lakeerein / download) asal size par hon
+  function withRaw(fn) {
+    __ncpRawDepth++;
+    applyTransform();
+    try { return fn(); } finally { __ncpRawDepth--; applyTransform(); }
+  }
+  function setZoom(z) {
+    __ncpZoom = z;
+    applyTransform();
     const zv = $('zoom-val'); if (zv) zv.textContent = Math.round(z * 100) + '%';
     const zs = $('in-zoom'); if (zs) zs.value = String(Math.round(z * 100));
     document.querySelectorAll('#zoom-bar [data-zoom]').forEach(b =>
@@ -483,7 +504,9 @@
     b.addEventListener('click', () => setZoom(parseFloat(b.dataset.zoom) || 1));
   });
   $('in-zoom').addEventListener('input', e => setZoom((parseFloat(e.target.value) || 100) / 100));
-  window.addEventListener('resize', () => { if (__ncpZoom !== 1) setZoom(__ncpZoom); });
+  window.addEventListener('resize', applyTransform);
+  window.addEventListener('load', applyTransform);
+  if (window.ResizeObserver) { try { new ResizeObserver(() => applyTransform()).observe($('preview')); } catch (e) {} }
 
   // ---- Tariq ka size (slider) ----
   function applyDateSize() {
@@ -883,12 +906,7 @@
     return mode;
   }
   function placeImageInColumn() {
-    if (__ncpZoom !== 1) {
-      const z = __ncpZoom; setZoom(1);
-      try { placeImageInColumnInner(); } finally { setZoom(z); }
-      return;
-    }
-    placeImageInColumnInner();
+    withRaw(placeImageInColumnInner);
   }
   function placeImageInColumnInner() {
     const body = $('pv-body');
@@ -1148,12 +1166,7 @@
   // Line gap ke bilkul darmiyan hoti hai aur text us ke qareeb tak jata
   // hai (gap sirf 10px) taake akhbaar jaisa professional look aaye.
   function updateDividers() {
-    if (__ncpZoom !== 1) {
-      const z = __ncpZoom; setZoom(1);
-      try { updateDividersInner(); } finally { setZoom(z); }
-      return;
-    }
-    updateDividersInner();
+    withRaw(updateDividersInner);
   }
   function updateDividersInner() {
     const body = $('pv-body');
@@ -1175,7 +1188,7 @@
       imgB = ir.bottom - br.top;
     }
     for (let i = 1; i < n; i++) {
-      const x = i * colW + (i - 1) * gap + gap / 2 - 0.5;
+      const x = Math.round(i * colW + (i - 1) * gap + gap / 2 - 1);
       const d = document.createElement('div');
       d.className = 'pv-divider';
       d.style.top = (imgL >= 0 && x >= imgL - 1 && x <= imgR + 1) ? (imgB + 14) + 'px' : '0px';
@@ -1375,62 +1388,49 @@
     const btn = $('btn-download');
     btn.disabled = true;
     btn.textContent = 'تیار ہو رہا ہے...';
-    // Zoom sirf dekhne ke liye hai — download hamesha zoom 1 par bane
-    const __z0 = __ncpZoom; if (__z0 !== 1) setZoom(1);
+    // Download hamesha asal size (1400px page) par bane — screen wala
+    // chhota/bada dikhawa hata kar
+    __ncpRawDepth++; applyTransform();
     try {
-      // Nastaliq font zaroor load ho jaye taake PNG mein bhi wohi font aaye
-      // (slider wale maujooda sizes ke mutabiq)
       await document.fonts.load('700 ' + $('in-font-heading').value + 'px "Jameel Noori Nastaleeq"');
       await document.fonts.load('700 ' + $('in-font-sub').value + 'px "Jameel Noori Nastaleeq"');
       await document.fonts.load(($('in-body-bold').checked ? '700 ' : '400 ') + $('in-font-body').value + 'px "Jameel Noori Nastaleeq"');
       await document.fonts.ready;
       const preview = $('preview');
-      applyFontSizes(); // Download preview ke maujooda sizes par hi bane
       updateDividers();
-      let canvas;
-      if ($('in-download-exact').checked) {
-        // Screen jaisa hi download: preview ki chaudai/on-screen layout
-        // bilkul tabdeel kiye baghair sirf scale barha kar HD banaya jaye.
-        // Is se pehle wala farq khatam hota hai (pehle download ke liye
-        // chaudai 1400px par force hoti thi, jis se columns/text dobara
-        // set ho jate the aur download screen se mukhtalif lagta tha).
-        const pw = preview.clientWidth || 1400;
-        const ph = preview.clientHeight || 1980;
-        // Canvas ki had (~16000px) ke andar rehte hue zyada se zyada scale
-        let scale = Math.min(8400 / pw, 16000 / ph);
-        let lastErr = null;
-        for (let i = 0; i < 4 && !canvas; i++) {
-          try {
-            canvas = await html2canvas(preview, { scale: scale, useCORS: true, backgroundColor: '#ffffff' });
-          } catch (e) { lastErr = e; scale = scale / 1.5; }
-        }
-        if (!canvas) throw lastErr || new Error('render failed');
-      } else {
-        // Purana tareeqa: download hamesha 1400px chaudai par bane
-        const oldW = preview.style.width;
-        const oldMaxW = preview.style.maxWidth;
-        preview.style.width = '1400px';
-        preview.style.maxWidth = 'none';
+      // Tez download: 1400px page x 3 = 4200px chaudi HD tasveer (pehle
+      // x6 = 8400px banti thi jo bohat waqt leti thi). Bohat lambi
+      // cutting ho to scale khud kam ho jata hai.
+      const pw = preview.offsetWidth || 1400;
+      const ph = preview.offsetHeight || 1980;
+      let scale = Math.min(3, 12000 / ph);
+      let canvas = null, lastErr = null;
+      for (let i = 0; i < 3 && !canvas; i++) {
         try {
-          // 8K Ultra HD JPEG: A4 (1400x1980) x scale 4 = 5600x7920px
-          canvas = await html2canvas(preview, { scale: 4, useCORS: true, backgroundColor: '#ffffff' });
-        } catch (e1) {
-          // Kamzor phone par scale 4 na ban sake to scale 3 par dobara try karo
-          canvas = await html2canvas(preview, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
-        } finally {
-          preview.style.width = oldW;
-          preview.style.maxWidth = oldMaxW;
-          updateDividers();
-        }
+          canvas = await html2canvas(preview, {
+            scale: scale, useCORS: true, backgroundColor: '#ffffff', logging: false,
+            width: pw, height: ph, windowWidth: Math.max(1500, document.documentElement.clientWidth),
+            ignoreElements: el => el.classList && (el.classList.contains('editor') || el.classList.contains('zoom-bar'))
+          });
+        } catch (e) { lastErr = e; canvas = null; scale = scale / 1.5; }
       }
+      if (!canvas) throw lastErr || new Error('render failed');
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
       const a = document.createElement('a');
       a.download = 'newspaper.jpg';
-      a.href = canvas.toDataURL('image/jpeg', 0.95);
-      a.click();
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      } else {
+        a.href = canvas.toDataURL('image/jpeg', 0.92);
+        a.click();
+      }
     } catch (e) {
       alert('ڈاؤن لوڈ میں مسئلہ ہوا، دوبارہ کوشش کریں');
     }
-    if (__z0 !== 1) setZoom(__z0);
+    __ncpRawDepth--; applyTransform();
     btn.disabled = false;
     btn.textContent = 'ڈاؤن لوڈ کریں';
   });
