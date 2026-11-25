@@ -779,14 +779,45 @@
     $('pv-text').textContent = full.slice(0, k);
     $('pv-text-after').textContent = full.slice(k);
   }
+  // Tez talaash: poora text aik hi dafa tasveer se pehle rakh kar dekho ke
+  // column k ka pehla harf kaun sa hai (sirf napai — text ko baar baar
+  // dobara set nahi karna parta, is liye bohat tez hai). Aakhir mein asal
+  // layout se tasdeeq hoti hai.
   function findSplitK(text, k) {
-    let lo = 0, hi = text.length;
+    const N = text.length;
+    if (!N) { splitTextAt(0); return 0; }
+    splitTextAt(N);
+    const node = $('pv-text').firstChild;
+    if (!node || node.nodeType !== 3) return N;
+    const body = $('pv-body');
+    const br = body.getBoundingClientRect();
+    const n = Math.max(actualColCount(), 1);
+    const W = body.clientWidth;
+    const gap = parseFloat(getComputedStyle(body).columnGap) || 10;
+    const colW = (W - (n - 1) * gap) / n;
+    const rg = document.createRange();
+    const colOf = i => {
+      while (i < N - 1 && /\s/.test(text[i])) i++;
+      rg.setStart(node, i); rg.setEnd(node, i + 1);
+      const rs = rg.getClientRects();
+      const r = rs.length ? rs[0] : rg.getBoundingClientRect();
+      const cx = r.left + r.width / 2 - br.left;
+      return Math.max(1, Math.floor((W - cx) / (colW + gap)) + 1);
+    };
+    let lo = 0, hi = N;
     while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      splitTextAt(mid);
-      if (imageColumnIndex() <= k) lo = mid; else hi = mid - 1;
+      const mid = Math.floor((lo + hi) / 2);
+      if (colOf(mid) >= k) hi = mid; else lo = mid + 1;
     }
-    return lo;
+    let K = lo;
+    splitTextAt(K);
+    let g = 0;
+    while (K > 0 && g++ < 8 && imageColumnIndex() > k) {
+      const j = text.lastIndexOf(' ', K - 2);
+      K = j < 0 ? 0 : j + 1;
+      splitTextAt(K);
+    }
+    return K;
   }
   // Text ki unchai aik poori-chaudai wale column mein napo (tasveer
   // chhupa kar). Nap ke baad layout wapas pehle jaisa kar diya jata hai.
@@ -905,7 +936,27 @@
     }
     return mode;
   }
+  // Likhte / slider ghumate waqt bhaari hisaab har harf par nahi chalta:
+  // thori der ruk kar aik hi dafa chalta hai, is liye typing nahi atakti.
+  var __ncpDefer = false, __ncpDeferMs = 150, __ncpPlaceT = null;
+  window.addEventListener('input', e => {
+    __ncpDefer = true;
+    __ncpDeferMs = (e.target && e.target.tagName === 'TEXTAREA') ? 350 : 150;
+  }, true);
+  window.addEventListener('change', () => { __ncpDefer = true; __ncpDeferMs = 60; }, true);
+  window.addEventListener('input', () => { __ncpDefer = false; });
+  window.addEventListener('change', () => { __ncpDefer = false; });
   function placeImageInColumn() {
+    if (__ncpDefer) {
+      clearTimeout(__ncpPlaceT);
+      __ncpPlaceT = setTimeout(() => {
+        __ncpPlaceT = null;
+        const d = __ncpDefer; __ncpDefer = false;
+        try { withRaw(placeImageInColumnInner); fitToPage(); updateDividers(); }
+        finally { __ncpDefer = d; }
+      }, __ncpDeferMs);
+      return;
+    }
     withRaw(placeImageInColumnInner);
   }
   function placeImageInColumnInner() {
@@ -1060,6 +1111,7 @@
   // ghataaya hua count tabdeel nahi hota jab tak text dobara na badle.
   function fitToPage() {
     if (!$('in-compact').checked) return;
+    if (__ncpDefer) return; // ruka hua hisaab chalne ke baad khud ho jayega
     const prev = $('preview');
     let guard = 0;
     while (prev.clientHeight > 2050 && colCountVal() < 5 && guard++ < 4) {
@@ -1390,6 +1442,7 @@
     btn.textContent = 'تیار ہو رہا ہے...';
     // Download hamesha asal size (1400px page) par bane — screen wala
     // chhota/bada dikhawa hata kar
+    if (__ncpPlaceT) { clearTimeout(__ncpPlaceT); __ncpPlaceT = null; placeImageInColumn(); fitToPage(); }
     __ncpRawDepth++; applyTransform();
     try {
       await document.fonts.load('700 ' + $('in-font-heading').value + 'px "Jameel Noori Nastaleeq"');
