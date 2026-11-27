@@ -376,7 +376,7 @@
         <input type="range" id="in-image-col" min="1" max="3" step="1" value="1">
       </div>
       <div class="field">
-        <label><input type="checkbox" id="in-compact" checked> لمبی خبر ایک پیج میں سمٹ جائے (لمبائی کم ہو، کالم خود بڑھیں گے)</label>
+        <label><input type="checkbox" id="in-compact"> لمبی خبر ایک پیج میں سمٹ جائے (لمبائی کم ہو، کالم خود بڑھیں گے)</label>
       </div>
     </div>
 
@@ -408,7 +408,7 @@
       </div>
       <div class="swatches" id="sw-body"><span class="sw-label">متن کا رنگ:</span></div>
       <div class="field-head" style="margin-top:8px;">
-        <label><input type="checkbox" id="in-equal-cols" checked> کالم برابر کریں (auto) — تمام کالم ایک ہی لائن پر ختم ہوں</label>
+        <label><input type="checkbox" id="in-equal-cols"> کالم برابر کریں (auto) — تمام کالم ایک ہی لائن پر ختم ہوں</label>
       </div>
       <div class="field-head" style="margin-top:8px;">
         <label>لائنیں فی کالم:</label>
@@ -539,6 +539,19 @@
       img.src = ev.target.result;
       img.style.display = 'inline-block';
       applyLogoSize();
+      // Logo yaad rakho taake agli dafa dobara na lagana pare
+      const probe = new Image();
+      probe.onload = () => {
+        try {
+          const sc = Math.min(1, 1000 / (probe.naturalWidth || 1000));
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(probe.naturalWidth * sc));
+          c.height = Math.max(1, Math.round(probe.naturalHeight * sc));
+          c.getContext('2d').drawImage(probe, 0, 0, c.width, c.height);
+          localStorage.setItem('ncp-logo', c.toDataURL('image/png'));
+        } catch (e2) { /* jagah na ho to koi baat nahi */ }
+      };
+      probe.src = ev.target.result;
     };
     r.readAsDataURL(f);
   });
@@ -1070,9 +1083,6 @@
         icol.value = String(target);
         $('img-col-val').textContent = String(target);
       }
-      if (parseInt(sizeEl.value, 10) >= 100) {
-        sizeEl.value = '60';
-      }
     }
     applyImageLayout();
   });
@@ -1305,11 +1315,6 @@
   // "kaam nahi karta" lagta tha. Checkbox khud uncheck ho jata hai;
   // dobara check karne par equalizer phir se line-height adjust kar sakta hai.
   $('in-line-height').addEventListener('input', () => {
-    const eq = $('in-equal-cols');
-    if (eq && eq.checked) {
-      eq.checked = false;
-      try { localStorage.setItem('ncp-equal-cols', '0'); } catch (e) { /* ignore */ }
-    }
     applyLineHeight();
   });
 
@@ -1488,6 +1493,24 @@
     btn.textContent = 'ڈاؤن لوڈ کریں';
   });
 
+  // ---- Settings yaad rakhna: jo user ne lagaya wohi rahe ----
+  const NCP_SET_KEY = 'ncp-settings-v2';
+  const NCP_SET_IDS = ['in-logo-size', 'in-logo-align', 'in-logo-full', 'in-date-size',
+    'in-font-heading', 'in-font-sub', 'in-font-body', 'in-body-bold', 'in-line-height',
+    'in-columns', 'in-col-width', 'in-compact', 'in-equal-cols',
+    'in-image-size', 'in-image-pos', 'in-image-full', 'in-image-radius',
+    'in-image-span', 'in-image-span-auto', 'in-image-col',
+    'in-caption-size', 'in-download-exact', 'in-zoom'];
+  function ncpSaveSettings() {
+    const o = {};
+    NCP_SET_IDS.forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      o[id] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    try { localStorage.setItem(NCP_SET_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
+  }
+
   // Default date = today
   (function init() {
     const t = urduLongDate(new Date());
@@ -1512,11 +1535,6 @@
     try {
       const lh = localStorage.getItem('ncp-line-height');
       if (lh !== null) $('in-line-height').value = lh;
-    } catch (e) { /* ignore */ }
-    // Equal-cols setting wapas lagao (default: ON)
-    try {
-      const eq = localStorage.getItem('ncp-equal-cols');
-      if (eq !== null) $('in-equal-cols').checked = eq === '1';
     } catch (e) { /* ignore */ }
     // Download-exact setting wapas lagao (default: ON)
     try {
@@ -1549,6 +1567,31 @@
       setTextColor('caption', savedText.caption || '');
       setTextColor('body', savedText.body || '');
     } catch (e) { /* ignore */ }
+    // ---- Tamam settings wahin se shuru hon jahan chhori thin ----
+    let __st = null;
+    try { __st = JSON.parse(localStorage.getItem(NCP_SET_KEY) || 'null'); } catch (e) { __st = null; }
+    if (__st) {
+      if (__st['in-columns'] != null) {
+        $('in-columns').value = __st['in-columns'];
+        const n0 = colCountVal();
+        $('in-image-span').max = n0;
+        $('in-image-col').max = n0;
+      }
+      NCP_SET_IDS.forEach(id => {
+        const el = $(id);
+        if (!el || __st[id] == null || id === 'in-columns') return;
+        if (el.type === 'checkbox') el.checked = !!__st[id];
+        else el.value = __st[id];
+      });
+    }
+    try {
+      const lg = localStorage.getItem('ncp-logo');
+      if (lg) { $('pv-logo').src = lg; $('pv-logo').style.display = 'inline-block'; }
+    } catch (e) { /* ignore */ }
+    $('pv-logo-wrap').className = 'align-' + $('in-logo-align').value;
+    $('in-image-span').disabled = $('in-image-span-auto').checked;
+    $('img-col-val').textContent = $('in-image-col').value;
+    applyLogoSize();
     applyFontSizes();
     applyColWidth();
     applyColumns();
@@ -1557,6 +1600,14 @@
     applyCaptionSize();
     updateDividers();
     updateLinesPerColDisplay();
+    if (__st && __st['in-zoom'] != null) setZoom((parseFloat(__st['in-zoom']) || 100) / 100);
+    // Har tabdeeli ke baad (thori der ruk kar) tamam settings save
+    let __saveT = null;
+    const __queueSave = () => { clearTimeout(__saveT); __saveT = setTimeout(ncpSaveSettings, 500); };
+    window.addEventListener('input', __queueSave);
+    window.addEventListener('change', __queueSave);
+    window.addEventListener('click', __queueSave);
+    window.addEventListener('pagehide', ncpSaveSettings);
     // Font load hone ke baad layout dobara lagao — font na hone par
     // napi hui unchai ghalat ho sakti hai (fallback font chaura hota hai)
     if (document.fonts && document.fonts.ready) {
